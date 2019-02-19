@@ -15,7 +15,7 @@ contract Exchange is Halt {
     struct Token {
         address addr;
         string  symbol;
-		uint    timestamp;
+        uint    timestamp;
     }
 
     /**
@@ -24,20 +24,20 @@ contract Exchange is Halt {
     *
     */
     /// @notice fee rate (parts per 10000)
-	uint public feeRate;
+    uint public feeRate;
 
     /// @notice fee rate precise
     /// @notice for example: if feeRate is 100, the fee ratio is 100/10000
     uint public constant RATIO_PRECISE = 10000;
 
     /// @notice fee recipient
-	address public feeRecipient;
+    address public feeRecipient;
 
     /// @notice list of supported tokens
-	mapping(address => Token) public mapSupportedTokens;
+    mapping(address => Token) public mapSupportedTokens;
 
     /// @notice list of token addresses
-	address[] public supportedTokens;
+    address[] public supportedTokens;
 
     /**
     *
@@ -100,14 +100,14 @@ contract Exchange is Halt {
     /// @notice       set the address of the fee recipient
     /// @param  addr  address of fee recipient
     function setFeeRecipient(address addr)
-		public
+        public
         onlyOwner
         returns(bool)
-	{
+    {
         require(addr != address(0x00));
 
         // set the fee recipient
-		feeRecipient = addr;
+        feeRecipient = addr;
 
         return true;
     }
@@ -115,50 +115,50 @@ contract Exchange is Halt {
     /// @notice       set the fee rate
     /// @param  rate  rate of the fee (parts per 10000)
     function setFeeRate(uint rate)
-		public
+        public
         onlyOwner
         returns(bool)
-	{
+    {
         require(rate >= 0 && rate <= RATIO_PRECISE);
 
         // set the fee rate
-		feeRate = rate;
+        feeRate = rate;
 
         return true;
     }
 
     /// @notice  get count of supported tokens
-	function getSupportedTokenCount()
-		public
-		constant
-		returns(uint count)
-	{
-		return supportedTokens.length;
-	}
+    function getSupportedTokenCount()
+        public
+        constant
+        returns(uint count)
+    {
+        return supportedTokens.length;
+    }
 
     /// @notice         add token to exchange
     /// @param  symbol  symbol of token
     /// @param  addr    address of token contract
     function addToken(string symbol, address addr)
-		public
+        public
         onlyOwner
         returns(bool)
-	{
+    {
         require(addr != address(0x00));
 
-		// check that the given token address is not already registered with
-		// the Exchange
+        // check that the given token address is not already registered with
+        // the Exchange
         require(!hasToken(addr));
 
-		// add token to supported tokens map
+        // add token to supported tokens map
         mapSupportedTokens[addr].symbol = symbol;
         mapSupportedTokens[addr].addr = addr;
         mapSupportedTokens[addr].timestamp = now;
 
-		// add to tokens array
-		supportedTokens.push(addr);
+        // add to tokens array
+        supportedTokens.push(addr);
 
-		// trigger event
+        // trigger event
         emit TokenAdded(symbol, addr, now);
 
         return true;
@@ -168,42 +168,42 @@ contract Exchange is Halt {
     /// @param  addr  address of token contract
     /// @return       true if token was deregistered
     function removeToken(address addr)
-		public
+        public
         onlyOwner
         returns(bool)
-	{
-		// check that the given token address is registered with the Exchange
+    {
+        // check that the given token address is registered with the Exchange
         require(hasToken(addr));
 
-		// remove token from map of supported tokens
+        // remove token from map of supported tokens
         delete mapSupportedTokens[addr];
 
-		// remove from supported tokens array
-		for (uint i = 0; i < supportedTokens.length; i++) {
-			if (supportedTokens[i] == addr) {
+        // remove from supported tokens array
+        for (uint i = 0; i < supportedTokens.length; i++) {
+            if (supportedTokens[i] == addr) {
 
-				supportedTokens[i] = supportedTokens[supportedTokens.length-1];
-				delete supportedTokens[supportedTokens.length-1];
-				supportedTokens.length--;
+                supportedTokens[i] = supportedTokens[supportedTokens.length-1];
+                delete supportedTokens[supportedTokens.length-1];
+                supportedTokens.length--;
 
-				// trigger event
-				emit TokenRemoved(addr, now);
+                // trigger event
+                emit TokenRemoved(addr, now);
 
-				return true;
-			}
-		}
+                return true;
+            }
+        }
 
-		return false;
+        return false;
     }
 
     /// @notice       check if token is registered
     /// @param  addr  address of token contract
     /// @return       true if `addr` is a registered token
     function hasToken(address addr)
-		internal
-		constant
-		returns(bool)
-	{
+        internal
+        constant
+        returns(bool)
+    {
         Token storage token = mapSupportedTokens[addr];
         if (token.addr == address(0)) {
             return false;
@@ -219,12 +219,12 @@ contract Exchange is Halt {
     /// @param makerAmount   amount that maker gives
     /// @param takerAmount   amount that taker gives
     function fulfillOrder(address makerToken, address takerToken, address makerAddress, address takerAddress, uint makerAmount, uint takerAmount)
-		public
-		// onlyOwner
-		notHalted
-		initialized
-		returns(bool)
-	{
+        public
+        // onlyOwner
+        notHalted
+        initialized
+        returns(bool)
+    {
         require(hasToken(makerToken));
         require(hasToken(takerToken));
         require(makerAddress != address(0x00));
@@ -236,28 +236,28 @@ contract Exchange is Halt {
         ERC20Protocol tokenB = ERC20Protocol(takerToken);
 
         // check maker allowance
-		if (tokenA.allowance(makerAddress, this) < makerAmount) {
-			emit TradeFailed(0x1, tokenA.allowance(makerAddress, this));
-			return false;
-		}
+        if (tokenA.allowance(makerAddress, this) < makerAmount) {
+            emit TradeFailed(0x1, tokenA.allowance(makerAddress, this));
+            return false;
+        }
 
         // check maker balance
-		if (tokenA.balanceOf(makerAddress) < makerAmount) {
-			emit TradeFailed(0x2, tokenA.balanceOf(makerAddress));
-			return false;
-		}
+        if (tokenA.balanceOf(makerAddress) < makerAmount) {
+            emit TradeFailed(0x2, tokenA.balanceOf(makerAddress));
+            return false;
+        }
 
         // check taker allowance
-		if (tokenB.allowance(takerAddress, this) < takerAmount) {
-			emit TradeFailed(0x11, tokenB.allowance(takerAddress, this));
-			return false;
-		}
+        if (tokenB.allowance(takerAddress, this) < takerAmount) {
+            emit TradeFailed(0x11, tokenB.allowance(takerAddress, this));
+            return false;
+        }
 
         // check taker balance
-		if (tokenB.balanceOf(takerAddress) < takerAmount) {
-			emit TradeFailed(0x12, tokenB.balanceOf(takerAddress));
-			return false;
-		}
+        if (tokenB.balanceOf(takerAddress) < takerAmount) {
+            emit TradeFailed(0x12, tokenB.balanceOf(takerAddress));
+            return false;
+        }
 
         // calculate fees
         uint feeAmountA = makerAmount.mul(feeRate).div(RATIO_PRECISE);
@@ -267,12 +267,12 @@ contract Exchange is Halt {
         tokenA.transferFrom(makerAddress, takerAddress, makerAmount.sub(feeAmountA));
         tokenB.transferFrom(takerAddress, makerAddress, takerAmount.sub(feeAmountB));
 
-		// transfer fees to recipient
+        // transfer fees to recipient
         if (feeRate > 0) {
-			tokenA.transferFrom(makerAddress, feeRecipient, feeAmountA);
-			tokenB.transferFrom(takerAddress, feeRecipient, feeAmountB);
-		}
+            tokenA.transferFrom(makerAddress, feeRecipient, feeAmountA);
+            tokenB.transferFrom(takerAddress, feeRecipient, feeAmountB);
+        }
 
-		return true;
-	}
+        return true;
+    }
 }
